@@ -58,14 +58,15 @@ pub fn run_chat(name: String, port: u16) -> io::Result<()> {
                     let server_socket =
                         SocketAddr::from((server_ip.parse::<Ipv4Addr>().unwrap(), port));
 
-                    drop(server);
+                    // drop(server);
                     server = None;
                     client = Some(ChatClient::new(name.clone(), server_socket)?);
                 }
                 "!" | "create" => {
-                    drop(client);
+                    // drop(client);
                     client = None;
-                    server = Some(ChatServer::new());
+                    server = Some(ChatServer::new(port));
+                    server.unwrap().serve()?;
                 }
                 _ => println!("Unknown command! Type :? to show help message"),
             }

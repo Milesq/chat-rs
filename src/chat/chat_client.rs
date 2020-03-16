@@ -15,10 +15,12 @@ pub struct ChatClient {
 
 impl ChatClient {
     pub fn new(name: String, server_ip: SocketAddr) -> io::Result<Self> {
+        Self::get_participants(server_ip)?;
         Ok(Self {
             name,
             server_ip,
-            others_participants: Self::get_participants(server_ip)?,
+            others_participants: Vec::new(),
+            // others_participants: Self::get_participants(server_ip)?,
         })
     }
 
@@ -26,11 +28,15 @@ impl ChatClient {
         let mut buf = Vec::<u8>::new();
         let packet = &bincode::serialize(&MsgType::GetParticipants).unwrap()[..];
 
-        let mut socket = TcpStream::connect(ip)?;
-        socket.write_all(packet)?;
-        socket.read_to_end(&mut buf)?;
+        // crate::prepare_request(&[1, 2]);
 
-        Ok(bincode::deserialize::<Participants>(&buf[..]).unwrap_or_default())
+        let mut socket = TcpStream::connect(ip)?;
+        // socket.write_all(packet)?;
+        // socket.read_to_end(&mut buf)?;
+
+        // Ok(bincode::deserialize::<Participants>(&buf[..]).unwrap_or_default())
+
+        Ok(Vec::new())
     }
 }
 
