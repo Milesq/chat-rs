@@ -1,25 +1,20 @@
 use {
-    serde::Serialize,
+    super::types::*,
     std::{
         io::{self, Read, Write},
-        net::{IpAddr, TcpStream},
+        net::{SocketAddr, TcpStream},
+        ops::Drop,
     },
 };
 
 pub struct ChatClient {
     pub name: String,
-    pub server_ip: IpAddr,
+    pub server_ip: SocketAddr,
     pub others_participants: Vec<String>,
 }
 
-#[derive(Serialize, Debug)]
-enum MsgType {
-    GetParticipants,
-    AddParticipant(String),
-}
-
 impl ChatClient {
-    pub fn new(name: String, server_ip: IpAddr) -> io::Result<Self> {
+    pub fn new(name: String, server_ip: SocketAddr) -> io::Result<Self> {
         Ok(Self {
             name,
             server_ip,
@@ -27,11 +22,20 @@ impl ChatClient {
         })
     }
 
-    fn get_participants(ip: IpAddr) -> io::Result<Vec<String>> {
-        let packet = bincode::serialize(&MsgType::GetParticipants)
-            .unwrap()
-            .bytes();
-        TcpStream::connect("192:80")?.write_all(packet);
-        Ok(vec![])
+    fn get_participants(ip: SocketAddr) -> io::Result<Participants> {
+        let mut buf = Vec::<u8>::new();
+        let packet = &bincode::serialize(&MsgType::GetParticipants).unwrap()[..];
+
+        let mut socket = TcpStream::connect(ip)?;
+        socket.write_all(packet)?;
+        socket.read_to_end(&mut buf)?;
+
+        Ok(bincode::deserialize::<Participants>(&buf[..]).unwrap_or_default())
+    }
+}
+
+impl Drop for ChatClient {
+    fn drop(&mut self) {
+        println!("Destroy client!");
     }
 }
