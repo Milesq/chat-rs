@@ -60,12 +60,18 @@ impl ChatServer {
                         .collect::<Participants>(),
                 ),
                 ReqType::AddParticipant(name) => {
-                    self.participants.push(Participant {
-                        name,
-                        ip: req.peer_addr().unwrap().ip(),
-                    });
+                    if self.participants.iter().any(|el| el.name.clone() == name) {
+                        bincode::serialize(&false)
+                    } else {
+                        println!("User connected: {}", name);
 
-                    bincode::serialize(&true)
+                        self.participants.push(Participant {
+                            name,
+                            ip: req.peer_addr().unwrap().ip(),
+                        });
+
+                        bincode::serialize(&true)
+                    }
                 }
             }
         };
