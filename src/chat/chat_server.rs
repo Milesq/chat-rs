@@ -1,8 +1,8 @@
 use super::types::*;
 
 use std::{
-    io::{self, Read, Write},
-    net::{IpAddr, SocketAddr, TcpListener, TcpStream},
+    io::{self, Write},
+    net::{IpAddr, TcpListener, TcpStream},
     ops::Drop,
 };
 
@@ -13,25 +13,21 @@ pub struct Participant {
 
 pub struct ChatServer {
     participants: Vec<Participant>,
-    pub port: u16,
+    messages: Vec<(String, String)>,
+    port: u16,
 }
 
 impl ChatServer {
     pub fn new(port: u16) -> Self {
         Self {
-            participants: vec!["milesq"]
-                .iter()
-                .map(|el| Participant {
-                    name: el.to_string(),
-                    ip: "127.0.0.1".parse().unwrap(),
-                })
-                .collect(),
+            participants: Vec::new(),
+            messages: Vec::new(),
             port,
         }
     }
 
     pub fn serve(mut self) -> io::Result<()> {
-        let listener = TcpListener::bind(format!("127.0.0.1:{}", self.port));
+        let listener = TcpListener::bind(format!("0.0.0.0:{}", self.port));
 
         for stream in listener?.incoming() {
             self.handle_request(&mut stream?).unwrap_or_else(|err| {
@@ -44,6 +40,8 @@ impl ChatServer {
 
     fn handle_request(&mut self, mut req: &mut TcpStream) -> io::Result<()> {
         let request_type: bincode::Result<ReqType> = bincode::deserialize_from(&mut req);
+        let user_ip = req.local_addr().unwrap().ip();
+        let user = self.participants.iter().find(|user| user.ip == user_ip);
 
         let resp = if let Err(err) = request_type {
             let response: Result<Participants, ServerErr> = Err(ServerErr::ErrBadRequest400);
@@ -65,14 +63,22 @@ impl ChatServer {
                     } else {
                         println!("User connected: {}", name);
 
-                        self.participants.push(Participant {
-                            name,
-                            ip: req.peer_addr().unwrap().ip(),
-                        });
+                        self.participants.push(Participant { name, ip: user_ip });
 
                         bincode::serialize(&true)
                     }
                 }
+                ReqType::SendMessage(msg) => match user {
+                    None => bincode::serialize(&ServerErr::UnknownUser),
+                    Some(user) => {
+                        let Participant { name, .. } = user;
+
+                        println!("{}: {}", name, msg);
+
+                        self.messages.push((name.clone(), msg));
+                        bincode::serialize(&true)
+                    }
+                },
             }
         };
 

@@ -70,6 +70,10 @@ pub fn run_chat(name: String, port: u16) -> io::Result<()> {
                 }
                 _ => println!("Unknown command! Type :? to show help message"),
             }
+        } else {
+            if let Some(client) = &client {
+                client.send(command_buf.clone());
+            }
         }
 
         command_buf.clear();

@@ -51,6 +51,15 @@ impl ChatClient {
 
         Ok(())
     }
+
+    pub fn send(&self, msg: String) -> io::Result<()> {
+        let req = bincode::serialize(&ReqType::SendMessage(msg)).unwrap();
+        let mut socket = TcpStream::connect(self.server_ip)?;
+
+        socket.write_all(&req[..])?;
+
+        Ok(())
+    }
 }
 
 impl Drop for ChatClient {
