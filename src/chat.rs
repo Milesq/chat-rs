@@ -57,7 +57,13 @@ pub fn run_chat(name: String, port: u16) -> io::Result<()> {
                     let server_socket =
                         SocketAddr::from((server_ip.parse::<Ipv4Addr>().unwrap(), port));
 
-                    client = Some(ChatClient::new(name.clone(), server_socket)?);
+                    client = Some(ChatClient::with_msg_listener(
+                        name.clone(),
+                        server_socket,
+                        |msg| {
+                            println!("{}: {}", msg.0, msg.1);
+                        },
+                    )?);
                 }
                 "!" | "create" => {
                     client = None;

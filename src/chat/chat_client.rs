@@ -4,21 +4,36 @@ use {
         io::{self, Write},
         net::{SocketAddr, TcpStream},
         ops::Drop,
+        thread,
     },
 };
 
 pub struct ChatClient {
-    pub name: String,
-    pub server_ip: SocketAddr,
-    pub others_participants: Vec<String>,
+    name: String,
+    server_ip: SocketAddr,
+    others_participants: Vec<String>,
+
+    pub on_msg: Option<fn(msg: (String, String))>,
 }
 
 impl ChatClient {
+    pub fn with_msg_listener(
+        name: String,
+        server_ip: SocketAddr,
+        listener: fn(msg: (String, String)),
+    ) -> io::Result<Self> {
+        let mut instance = Self::new(name, server_ip)?;
+        instance.on_msg = Some(listener);
+
+        Ok(instance)
+    }
+
     pub fn new(name: String, server_ip: SocketAddr) -> io::Result<Self> {
         let mut instance = Self {
             name,
             server_ip,
             others_participants: Self::get_participants(server_ip)?,
+            on_msg: None,
         };
 
         instance.register()?;
@@ -47,6 +62,8 @@ impl ChatClient {
 
         if !resp.expect("Register error") {
             println!("User name already taken! Consider to choose another");
+        } else {
+            self.stay_up_to_date();
         }
 
         Ok(())
@@ -59,6 +76,13 @@ impl ChatClient {
         socket.write_all(&req[..])?;
 
         Ok(())
+    }
+
+    pub fn stay_up_to_date(&self) {
+        // thread::spawn(|| {
+        //     let req = bincode::serialize(&ReqType::SendMessage(msg)).unwrap();
+        //     let mut socket = TcpStream::connect(self.server_ip)?;
+        // });
     }
 }
 
