@@ -1,6 +1,7 @@
 use std::{
     io,
     net::{Ipv4Addr, SocketAddr},
+    thread,
 };
 
 mod comunication_types;
@@ -26,9 +27,7 @@ const HELP_MSG: &str = "Commands:
 pub fn run_chat(name: String, port: u16) -> io::Result<()> {
     let stdin = io::stdin();
     let mut command_buf = String::new();
-
     let mut client: Option<ChatClient> = None;
-    let mut server: Option<ChatServer> = None;
 
     loop {
         stdin.read_line(&mut command_buf)?;
@@ -58,22 +57,21 @@ pub fn run_chat(name: String, port: u16) -> io::Result<()> {
                     let server_socket =
                         SocketAddr::from((server_ip.parse::<Ipv4Addr>().unwrap(), port));
 
-                    // drop(server);
-                    server = None;
                     client = Some(ChatClient::new(name.clone(), server_socket)?);
                 }
                 "!" | "create" => {
-                    // drop(client);
                     client = None;
-                    server = Some(ChatServer::new(port));
-                    server.unwrap().serve()?;
+                    let server = ChatServer::new(port);
+                    thread::spawn(|| {
+                        server.serve().unwrap_or_else(|err| {
+                            println!("Err: {:?}", err);
+                        });
+                    });
                 }
                 _ => println!("Unknown command! Type :? to show help message"),
             }
-        } else {
-            if let Some(client) = &client {
-                client.send(command_buf.clone());
-            }
+        } else if let Some(client) = &client {
+            client.send(command_buf.clone())?;
         }
 
         command_buf.clear();

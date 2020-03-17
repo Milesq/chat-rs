@@ -1,7 +1,7 @@
 use {
     super::types::*,
     std::{
-        io::{self, Read, Write},
+        io::{self, Write},
         net::{SocketAddr, TcpStream},
         ops::Drop,
     },
