@@ -1,10 +1,14 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[allow(dead_code)]
-#[derive(Serialize, Debug)]
-pub enum MsgType {
+#[derive(Serialize, Deserialize, Debug)]
+pub enum ReqType {
     GetParticipants,
     AddParticipant(String),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum ServerErr {
+    ErrBadRequest400,
 }
 
 pub type Participants = Vec<String>;

@@ -19,26 +19,19 @@ impl ChatClient {
         Ok(Self {
             name,
             server_ip,
-            others_participants: Vec::new(),
-            // others_participants: Self::get_participants(server_ip)?,
+            others_participants: Self::get_participants(server_ip)?,
         })
     }
 
     fn get_participants(ip: SocketAddr) -> io::Result<Participants> {
-        let mut buf = Vec::<u8>::new();
-        let req_body = &bincode::serialize(&MsgType::GetParticipants).unwrap()[..];
-
-        let req = crate::utils::prepare_request(req_body);
+        let req = &bincode::serialize(&ReqType::GetParticipants).unwrap()[..];
 
         let mut socket = TcpStream::connect(ip)?;
-        socket.write_all(req.as_slice())?;
-        // socket.read_to_end(&mut buf)?;
+        socket.write_all(req)?;
 
-        // println!("{:?}", buf);
+        let participants: bincode::Result<Participants> = bincode::deserialize_from(&socket);
 
-        // Ok(bincode::deserialize::<Participants>(&buf[..]).unwrap_or_default())
-
-        Ok(Vec::new())
+        Ok(participants.expect("Cannot connect with server and download users data!"))
     }
 }
 
