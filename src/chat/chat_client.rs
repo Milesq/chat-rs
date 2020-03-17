@@ -26,13 +26,12 @@ impl ChatClient {
 
     fn get_participants(ip: SocketAddr) -> io::Result<Participants> {
         let mut buf = Vec::<u8>::new();
-        let packet = &bincode::serialize(&MsgType::GetParticipants).unwrap()[..];
+        let req_body = &bincode::serialize(&MsgType::GetParticipants).unwrap()[..];
 
-        // let req = crate::utils::prepare_metadata_request(packet.len(), None);
-        // println!("{:?}", req);
+        let req = crate::utils::prepare_request(req_body);
 
-        // let mut socket = TcpStream::connect(ip)?;
-        // socket.write_all(req)?;
+        let mut socket = TcpStream::connect(ip)?;
+        socket.write_all(req.as_slice())?;
         // socket.read_to_end(&mut buf)?;
 
         // println!("{:?}", buf);
