@@ -37,7 +37,9 @@ impl ChatServer {
     fn handle_request(&self, req: &mut TcpStream) -> io::Result<()> {
         println!("serve");
         let mut buf = [0; 2];
-        req.read(&mut buf).unwrap();
+        req.read(&mut buf)?;
+
+        req.write_all(&[0])?;
 
         println!("{:?}", buf);
         Ok(())

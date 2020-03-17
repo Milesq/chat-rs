@@ -28,11 +28,14 @@ impl ChatClient {
         let mut buf = Vec::<u8>::new();
         let packet = &bincode::serialize(&MsgType::GetParticipants).unwrap()[..];
 
-        // crate::prepare_request(&[1, 2]);
+        // let req = crate::utils::prepare_metadata_request(packet.len(), None);
+        // println!("{:?}", req);
 
-        let mut socket = TcpStream::connect(ip)?;
-        // socket.write_all(packet)?;
+        // let mut socket = TcpStream::connect(ip)?;
+        // socket.write_all(req)?;
         // socket.read_to_end(&mut buf)?;
+
+        // println!("{:?}", buf);
 
         // Ok(bincode::deserialize::<Participants>(&buf[..]).unwrap_or_default())
 
