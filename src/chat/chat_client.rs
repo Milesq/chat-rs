@@ -4,7 +4,6 @@ use {
         io::{self, Write},
         net::{SocketAddr, TcpStream},
         ops::Drop,
-        thread,
     },
 };
 
@@ -17,17 +16,6 @@ pub struct ChatClient {
 }
 
 impl ChatClient {
-    pub fn with_msg_listener(
-        name: String,
-        server_ip: SocketAddr,
-        listener: fn(msg: (String, String)),
-    ) -> io::Result<Self> {
-        let mut instance = Self::new(name, server_ip)?;
-        instance.on_msg = Some(listener);
-
-        Ok(instance)
-    }
-
     pub fn new(name: String, server_ip: SocketAddr) -> io::Result<Self> {
         let mut instance = Self {
             name,
