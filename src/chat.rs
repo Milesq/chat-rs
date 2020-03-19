@@ -28,6 +28,8 @@ pub fn run_chat(name: String, port: u16) -> io::Result<()> {
     let stdin = io::stdin();
     let mut command_buf = String::new();
     let mut client: Option<ChatClient> = None;
+    #[allow(unused_assignments)]
+    let mut server: Option<ChatServer> = None;
 
     loop {
         stdin.read_line(&mut command_buf)?;
@@ -38,6 +40,7 @@ pub fn run_chat(name: String, port: u16) -> io::Result<()> {
             let command = command.chars().skip(1).collect::<String>();
             let command = command.split(' ').map(|el| el.trim()).collect::<Vec<_>>();
 
+            #[allow(unused_assignments)]
             match command[0] {
                 "q" | "quit" => break,
                 ";" | "clear" => println!("\x1B[2J"),
@@ -61,21 +64,25 @@ pub fn run_chat(name: String, port: u16) -> io::Result<()> {
                     let server_socket =
                         SocketAddr::from((server_ip.parse::<Ipv4Addr>().unwrap(), port));
 
-                    let mut local_client = ChatClient::new(name.clone(), server_socket)?;
-                    local_client.on_msg = Some(|msg| {
+                    let mut client_instance = ChatClient::new(name.clone(), server_socket)?;
+                    client_instance.on_msg = Some(|msg| {
                         println!("{}: {}", msg.0, msg.1);
                     });
 
-                    client = Some(local_client);
+                    server = None;
+                    client = Some(client_instance);
                 }
                 "!" | "create" => {
                     client = None;
-                    let server = ChatServer::new(port);
-                    thread::spawn(|| {
-                        server.serve().unwrap_or_else(|err| {
-                            println!("Err: {:?}", err);
+                    server = Some(ChatServer::new(port));
+
+                    if let Some(server_instance) = server {
+                        thread::spawn(|| {
+                            server_instance.serve().unwrap_or_else(|err| {
+                                println!("{:?}", err);
+                            });
                         });
-                    });
+                    }
                 }
                 _ => println!("Unknown command! Type :? to show help message"),
             }

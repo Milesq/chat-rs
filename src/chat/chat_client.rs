@@ -24,7 +24,7 @@ impl ChatClient {
             on_msg: None,
         };
 
-        instance.register()?;
+        // instance.register()?;
 
         Ok(instance)
     }
@@ -36,11 +36,12 @@ impl ChatClient {
         socket
             .set_nonblocking(true)
             .expect("failed to initiate non-blocking");
-        socket.write_all(req)?;
+        socket.write_all(&[1, 2, 3])?;
 
-        let participants: bincode::Result<Participants> = bincode::deserialize_from(&socket);
+        // let participants: bincode::Result<Participants> = bincode::deserialize_from(&socket);
 
-        Ok(participants.expect("Cannot connect with server and download users data!"))
+        // Ok(participants.expect("Cannot connect with server and download users data!"))
+        Ok(Vec::new())
     }
 
     fn register(&mut self) -> io::Result<()> {

@@ -1,9 +1,11 @@
 use super::types::*;
 
 use std::{
-    io::{self, Write},
+    io::{self, ErrorKind, Read, Write},
     net::{IpAddr, TcpListener, TcpStream},
     ops::Drop,
+    thread,
+    time::Duration,
 };
 
 pub struct Participant {
@@ -27,15 +29,39 @@ impl ChatServer {
     }
 
     pub fn serve(mut self) -> io::Result<()> {
-        let listener = TcpListener::bind(format!("0.0.0.0:{}", self.port));
+        let mut listener = TcpListener::bind(format!("0.0.0.0:{}", self.port))?;
+        listener
+            .set_nonblocking(true)
+            .expect("failed to initialize non-blocking");
 
-        for stream in listener?.incoming() {
-            self.handle_request(&mut stream?).unwrap_or_else(|err| {
-                println!("Err: {:?}", err);
-            });
+        loop {
+            if let Ok((mut socket, addr)) = listener.accept() {
+                println!("Client {} connected", addr);
+
+                thread::spawn(move || loop {
+                    let mut buff = vec![0; 20];
+
+                    match socket.read_exact(&mut buff) {
+                        Ok(_) => {
+                            println!("{:?}", buff);
+                        }
+                        Err(ref err) if err.kind() == ErrorKind::WouldBlock => (),
+                        Err(_) => {
+                            println!("closing connection with: {}", addr);
+                            break;
+                        }
+                    }
+
+                    thread::sleep(Duration::from_millis(100));
+                });
+            }
         }
 
-        Ok(())
+        // for stream in listener.incoming() {
+        //     self.handle_request(&mut stream?).unwrap_or_else(|err| {
+        //         println!("Err: {:?}", err);
+        //     });
+        // }
     }
 
     fn handle_request(&mut self, mut req: &mut TcpStream) -> io::Result<()> {
