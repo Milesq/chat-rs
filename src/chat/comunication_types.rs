@@ -14,3 +14,10 @@ pub enum ServerErr {
 }
 
 pub type Participants = Vec<String>;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum WhatsUp {
+    NewParticipant(String),
+    NewMessage((String, String)),
+    ParticipantDisconected(String),
+}
