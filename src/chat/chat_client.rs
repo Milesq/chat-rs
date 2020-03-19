@@ -9,34 +9,39 @@ use {
 
 pub struct ChatClient {
     name: String,
-    server_ip: SocketAddr,
-    others_participants: Vec<String>,
+    server: TcpStream,
+    others_participants: Option<Vec<String>>,
 
     pub on_msg: Option<fn(msg: (String, String))>,
 }
 
 impl ChatClient {
     pub fn new(name: String, server_ip: SocketAddr) -> io::Result<Self> {
+        let mut server = TcpStream::connect(server_ip)?;
+        server
+            .set_nonblocking(true)
+            .expect("failed to initiate non-blocking");
         let mut instance = Self {
             name,
-            server_ip,
-            others_participants: Self::get_participants(server_ip)?,
+            server,
+            others_participants: None,
             on_msg: None,
         };
 
-        // instance.register()?;
+        instance.register()?;
+        instance.others_participants = Some(instance.get_participants()?);
 
         Ok(instance)
     }
 
-    fn get_participants(ip: SocketAddr) -> io::Result<Participants> {
-        let req = &bincode::serialize(&ReqType::GetParticipants).unwrap()[..];
+    fn get_participants(&self) -> io::Result<Participants> {
+        // let req = &bincode::serialize(&ReqType::GetParticipants).unwrap()[..];
 
-        let mut socket = TcpStream::connect(ip)?;
-        socket
-            .set_nonblocking(true)
-            .expect("failed to initiate non-blocking");
-        socket.write_all(&[1, 2, 3])?;
+        // let mut socket = TcpStream::connect(ip)?;
+        // socket
+        //     .set_nonblocking(true)
+        //     .expect("failed to initiate non-blocking");
+        // socket.write_all(&[1, 2, 3])?;
 
         // let participants: bincode::Result<Participants> = bincode::deserialize_from(&socket);
 
@@ -47,32 +52,27 @@ impl ChatClient {
     fn register(&mut self) -> io::Result<()> {
         let req = bincode::serialize(&ReqType::AddParticipant(self.name.clone())).unwrap();
 
-        let mut socket = TcpStream::connect(self.server_ip)?;
-        socket
-            .set_nonblocking(true)
-            .expect("failed to initiate non-blocking");
+        self.server.write_all(&req[..])?;
 
-        socket.write_all(&req[..])?;
+        // let resp: bincode::Result<bool> = bincode::deserialize_from(&socket);
 
-        let resp: bincode::Result<bool> = bincode::deserialize_from(&socket);
-
-        if !resp.expect("Register error") {
-            println!("User name already taken! Consider to choose another");
-        } else {
-            self.stay_up_to_date();
-        }
+        // if !resp.expect("Register error") {
+        //     println!("User name already taken! Consider to choose another");
+        // } else {
+        //     self.stay_up_to_date();
+        // }
 
         Ok(())
     }
 
     pub fn send(&self, msg: String) -> io::Result<()> {
-        let req = bincode::serialize(&ReqType::SendMessage(msg)).unwrap();
+        /* let req = bincode::serialize(&ReqType::SendMessage(msg)).unwrap();
         let mut client = TcpStream::connect(self.server_ip)?;
         client
             .set_nonblocking(true)
             .expect("failed to initiate non-blocking");
 
-        client.write_all(&req[..])?;
+        client.write_all(&req[..])?; */
 
         Ok(())
     }
