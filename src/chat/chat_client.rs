@@ -33,6 +33,9 @@ impl ChatClient {
         let req = &bincode::serialize(&ReqType::GetParticipants).unwrap()[..];
 
         let mut socket = TcpStream::connect(ip)?;
+        socket
+            .set_nonblocking(true)
+            .expect("failed to initiate non-blocking");
         socket.write_all(req)?;
 
         let participants: bincode::Result<Participants> = bincode::deserialize_from(&socket);
@@ -44,6 +47,10 @@ impl ChatClient {
         let req = bincode::serialize(&ReqType::AddParticipant(self.name.clone())).unwrap();
 
         let mut socket = TcpStream::connect(self.server_ip)?;
+        socket
+            .set_nonblocking(true)
+            .expect("failed to initiate non-blocking");
+
         socket.write_all(&req[..])?;
 
         let resp: bincode::Result<bool> = bincode::deserialize_from(&socket);
@@ -59,9 +66,12 @@ impl ChatClient {
 
     pub fn send(&self, msg: String) -> io::Result<()> {
         let req = bincode::serialize(&ReqType::SendMessage(msg)).unwrap();
-        let mut socket = TcpStream::connect(self.server_ip)?;
+        let mut client = TcpStream::connect(self.server_ip)?;
+        client
+            .set_nonblocking(true)
+            .expect("failed to initiate non-blocking");
 
-        socket.write_all(&req[..])?;
+        client.write_all(&req[..])?;
 
         Ok(())
     }
