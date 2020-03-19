@@ -44,12 +44,16 @@ pub fn run_chat(name: String, port: u16) -> io::Result<()> {
                 "?" => println!("{}", HELP_MSG),
                 "#" | "join" => {
                     let server_ip = if command.len() < 2 {
-                        let mut buf = String::new();
-                        println!("Type server ip");
+                        if cfg!(debug_assertions) {
+                            String::from("127.0.0.1")
+                        } else {
+                            let mut buf = String::new();
+                            println!("Type server ip");
 
-                        stdin.read_line(&mut buf)?;
+                            stdin.read_line(&mut buf)?;
 
-                        buf.trim().to_string()
+                            buf.trim().to_string()
+                        }
                     } else {
                         command[1].to_string()
                     };
