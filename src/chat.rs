@@ -1,6 +1,7 @@
 use std::{
     io,
     net::{Ipv4Addr, SocketAddr},
+    sync::mpsc::{Sender, TryRecvError},
     thread,
 };
 
@@ -10,8 +11,8 @@ use comunication_types as types;
 mod chat_client;
 mod chat_server;
 
-use chat_client::ChatClient;
-use chat_server::ChatServer;
+use chat_client::run_client;
+use chat_server::run_server;
 
 const HELP_MSG: &str = "Commands:
 - q or quit - exit program
@@ -27,9 +28,8 @@ const HELP_MSG: &str = "Commands:
 pub fn run_chat(name: String, port: u16) -> io::Result<()> {
     let stdin = io::stdin();
     let mut command_buf = String::new();
-    let mut client: Option<ChatClient> = None;
-    #[allow(unused_assignments)]
-    let mut server: Option<ChatServer> = None;
+    let mut message_sender: Option<Sender<String>> = None;
+    let mut server_terminator: Option<&dyn Fn()> = None;
 
     loop {
         stdin.read_line(&mut command_buf)?;
@@ -40,12 +40,14 @@ pub fn run_chat(name: String, port: u16) -> io::Result<()> {
             let command = command.chars().skip(1).collect::<String>();
             let command = command.split(' ').map(|el| el.trim()).collect::<Vec<_>>();
 
-            #[allow(unused_assignments)]
             match command[0] {
                 "q" | "quit" => break,
                 ";" | "clear" => println!("\x1B[2J"),
                 "?" => println!("{}", HELP_MSG),
                 "#" | "join" => {
+                    if let Some(terminator) = server_terminator {
+                        terminator();
+                    }
                     let server_ip = if command.len() < 2 {
                         if cfg!(debug_assertions) {
                             String::from("127.0.0.1")
@@ -64,30 +66,30 @@ pub fn run_chat(name: String, port: u16) -> io::Result<()> {
                     let server_socket =
                         SocketAddr::from((server_ip.parse::<Ipv4Addr>().unwrap(), port));
 
-                    let mut client_instance = ChatClient::new(name.clone(), server_socket)?;
-                    client_instance.on_msg = Some(|msg| {
-                        println!("{}: {}", msg.0, msg.1);
-                    });
+                    let (tx, new_msg) = run_client(server_socket)?;
+                    message_sender = Some(tx);
 
-                    server = None;
-                    client = Some(client_instance);
+                    thread::spawn(move || loop {
+                        // display new messages
+                        match new_msg.try_recv() {
+                            Ok(msg) => {
+                                println!("{}", msg);
+                            }
+                            Err(TryRecvError::Empty) => (),
+                            Err(TryRecvError::Disconnected) => break,
+                        }
+                    });
                 }
                 "!" | "create" => {
-                    client = None;
-                    server = Some(ChatServer::new(port));
-
-                    if let Some(server_instance) = server {
-                        thread::spawn(|| {
-                            server_instance.serve().unwrap_or_else(|err| {
-                                println!("{:?}", err);
-                            });
-                        });
-                    }
+                    message_sender = None;
+                    server_terminator = Some(run_server(port).unwrap());
                 }
                 _ => println!("Unknown command! Type :? to show help message"),
             }
-        } else if let Some(client) = &client {
-            client.send(command_buf.clone())?;
+        } else if let Some(message_sender) = &message_sender {
+            message_sender
+                .send(command_buf.clone())
+                .expect("Cannot send message");
         }
 
         command_buf.clear();
