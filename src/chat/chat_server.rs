@@ -29,13 +29,13 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
             println!("Client {} connected", addr);
 
             thread::spawn(move || loop {
-                let mut buf = vec![0; 32];
+                let mut buf = vec![0; crate::PACKET_SIZE];
 
                 match socket.read_exact(&mut buf) {
                     Ok(_) => {
                         println!("{:?}", handle_request::handler(buf));
                         let mut buf = "abc".to_string().clone().into_bytes();
-                        buf.resize(32, 0);
+                        buf.resize(crate::PACKET_SIZE, 0);
 
                         socket.write_all(&buf).unwrap_or_else(|err| {
                             println!("Send response error: {:?}", err);

@@ -21,7 +21,7 @@ pub fn run_client(
         .expect("failed to initiate non-blocking");
 
     thread::spawn(move || loop {
-        let mut buf = vec![0; 32];
+        let mut buf = vec![0; crate::PACKET_SIZE];
         match client.read_exact(&mut buf) {
             Ok(_) => {
                 println!("message recv {:?}", buf);
@@ -36,7 +36,7 @@ pub fn run_client(
         match rx_msg.try_recv() {
             Ok(msg) => {
                 let mut buff = msg.clone().into_bytes();
-                buff.resize(32, 0);
+                buff.resize(crate::PACKET_SIZE, 0);
                 client.write_all(&buff).unwrap();
             }
             Err(TryRecvError::Empty) => (),
