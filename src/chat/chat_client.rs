@@ -8,12 +8,19 @@ use {
     },
 };
 
+const MAX: usize = std::u8::MAX as usize;
+
 pub fn run_client(
     name: &str,
     server_ip: SocketAddr,
 ) -> io::Result<(Sender<String>, Receiver<WhatsUp>)> {
-    let (tx_msg, rx_msg) = channel::<String>();
+    let (tx_raw_msg, rx_raw_msg) = channel::<Vec<u8>>();
+    let (tx_user_msg, rx_user_msg) = channel::<String>();
     let (tx_ext_msg, rx_ext_msg) = channel::<WhatsUp>();
+
+    tx_raw_msg
+        .send(bincode::serialize(&ReqType::AddParticipant(name.to_string())).unwrap())
+        .expect("Cannot pass data to sender");
 
     let mut client = TcpStream::connect(server_ip)?;
     client
@@ -33,11 +40,20 @@ pub fn run_client(
             }
         }
 
-        match rx_msg.try_recv() {
+        match rx_user_msg.try_recv() {
             Ok(msg) => {
-                let mut buff = msg.clone().into_bytes();
-                buff.resize(crate::PACKET_SIZE, 0);
-                client.write_all(&buff).unwrap();
+                let packet = bincode::serialize(&ReqType::SendMessage(msg)).unwrap();
+                tx_raw_msg.send(packet).expect("Cannot pass data to sender");
+            }
+            Err(TryRecvError::Empty) => (),
+            Err(TryRecvError::Disconnected) => break,
+        }
+
+        match rx_raw_msg.try_recv() {
+            Ok(packet) => {
+                client
+                    .write_all(&prepare_packet(packet)[..])
+                    .expect("Cannot send TCP packet");
             }
             Err(TryRecvError::Empty) => (),
             Err(TryRecvError::Disconnected) => break,
@@ -46,5 +62,21 @@ pub fn run_client(
         crate::sleep();
     });
 
-    Ok((tx_msg, rx_ext_msg))
+    Ok((tx_user_msg, rx_ext_msg))
+}
+
+fn prepare_packet(packet: Vec<u8>) -> Vec<u8> {
+    let mut ret = Vec::new();
+    let mut len = packet.len();
+
+    while len > MAX {
+        len -= MAX;
+        ret.push(MAX as u8);
+    }
+
+    ret.push(len as u8);
+    ret.push(0);
+
+    ret.extend(packet);
+    ret
 }

@@ -3,7 +3,6 @@ use std::fmt;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ReqType {
-    GetParticipants,
     AddParticipant(String),
     SendMessage(String),
 }
