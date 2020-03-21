@@ -1,15 +1,12 @@
 use std::{
     io::{self, ErrorKind, Read, Write},
-    net::{IpAddr, TcpListener},
+    net::TcpListener,
+    sync::{Arc, Mutex},
     thread,
 };
 
 mod handle_request;
-
-pub struct Participant {
-    pub name: String,
-    pub ip: IpAddr,
-}
+use handle_request::Handler;
 
 use super::prepare_request::*;
 
@@ -19,6 +16,7 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
     server
         .set_nonblocking(true)
         .expect("failed to initialize non-blocking");
+    let tcp_handler = Arc::new(Mutex::new(Handler::new()));
 
     thread::spawn(move || loop {
         if unsafe { SHUTDOWN } {
@@ -29,6 +27,7 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
             println!("Client {} connected", addr);
             let mut packet_config = PreparePacketConfig::new();
 
+            let tcp_handler = Arc::clone(&tcp_handler);
             thread::spawn(move || loop {
                 let mut buf = vec![0; crate::PACKET_SIZE];
 
@@ -36,8 +35,9 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
                     Ok(_) => {
                         if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
                             packet_config = Default::default();
+                            let mut tcp_handler = tcp_handler.lock().unwrap();
 
-                            let packet = handle_request::handler(buf, addr);
+                            let packet = (*tcp_handler).handler(buf, addr);
 
                             for part in prepare_to_send(packet) {
                                 socket.write_all(&part[..]).unwrap_or_else(|err| {

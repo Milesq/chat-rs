@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{fmt, net::IpAddr};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum ReqType {
@@ -12,11 +12,15 @@ pub type AuthorizedReq = (String, ReqType);
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ServerErr {
     ErrBadRequest400,
-    UnknownUser,
+    BadUser,
+    UserNameAlreadyTaken,
     PermissionDenied,
 }
 
-pub type Participants = Vec<String>;
+pub struct Participant {
+    pub name: String,
+    pub ip: IpAddr,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum WhatsUp {
