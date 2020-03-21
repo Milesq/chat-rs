@@ -51,9 +51,11 @@ pub fn run_client(
 
         match rx_raw_msg.try_recv() {
             Ok(packet) => {
-                client
-                    .write_all(&prepare_packet(packet)[..])
-                    .expect("Cannot send TCP packet");
+                for packet in prepare_packet(packet) {
+                    client
+                        .write_all(&packet[..])
+                        .expect("Cannot send TCP packet");
+                }
             }
             Err(TryRecvError::Empty) => (),
             Err(TryRecvError::Disconnected) => break,
@@ -65,7 +67,7 @@ pub fn run_client(
     Ok((tx_user_msg, rx_ext_msg))
 }
 
-fn prepare_packet(packet: Vec<u8>) -> Vec<u8> {
+fn prepare_packet(packet: Vec<u8>) -> Vec<Vec<u8>> {
     let mut ret = Vec::new();
     let mut len = packet.len();
 
@@ -78,5 +80,15 @@ fn prepare_packet(packet: Vec<u8>) -> Vec<u8> {
     ret.push(0);
 
     ret.extend(packet);
+
+    let mut ret = ret
+        .chunks(crate::PACKET_SIZE)
+        .map(|el| Vec::from(el))
+        .collect::<Vec<_>>();
+
+    for el in &mut ret {
+        el.resize(crate::PACKET_SIZE, 0);
+    }
+
     ret
 }

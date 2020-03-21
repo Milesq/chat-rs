@@ -8,7 +8,7 @@ fn sleep() {
     thread::sleep(Duration::from_millis(100));
 }
 
-const PACKET_SIZE: usize = 128;
+const PACKET_SIZE: usize = 32;
 
 fn main() {
     chat::run_chat("Milesq", 6000).unwrap_or_else(|err| {

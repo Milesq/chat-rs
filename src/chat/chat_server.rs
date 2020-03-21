@@ -27,22 +27,23 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
 
         if let Ok((mut socket, addr)) = server.accept() {
             println!("Client {} connected", addr);
-            let mut packet = Vec::new();
+            // let mut packet = Vec::new();
 
             thread::spawn(move || loop {
                 let mut buf = vec![0; crate::PACKET_SIZE];
 
                 match socket.read_exact(&mut buf) {
                     Ok(_) => {
-                        if let Some(buf) = prepare_packet(buf, &mut packet) {
-                            println!("{:?}", handle_request::handler(buf));
-                            let mut buf = "abc".to_string().clone().into_bytes();
-                            buf.resize(crate::PACKET_SIZE, 0);
+                        println!("{:?}", buf);
+                        // if let Some(buf) = prepare_packet(buf, &mut packet) {
+                        //     println!("{:?}", handle_request::handler(buf));
+                        //     let mut buf = "abc".to_string().clone().into_bytes();
+                        //     buf.resize(crate::PACKET_SIZE, 0);
 
-                            socket.write_all(&buf).unwrap_or_else(|err| {
-                                println!("Send response error: {:?}", err);
-                            });
-                        }
+                        //     socket.write_all(&buf).unwrap_or_else(|err| {
+                        //         println!("Send response error: {:?}", err);
+                        //     });
+                        // }
                     }
                     Err(ref err) if err.kind() == ErrorKind::WouldBlock => (),
                     Err(_) => {
@@ -63,6 +64,7 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
     })
 }
 
-fn prepare_packet(part: Vec<u8>, _packet: &mut Vec<u8>) -> Option<Vec<u8>> {
+fn prepare_packet(part: Vec<u8>, packet: &mut Vec<u8>) -> Option<Vec<u8>> {
+    println!("{:?} {:?}", packet, part);
     Some(part)
 }
