@@ -18,6 +18,7 @@ impl Handler {
         if req.is_err() && authorized_req.is_err() {
             return bincode::serialize(&ServerErr::ErrBadRequest400).unwrap();
         }
+
         if req.is_ok() {
             if let Ok(ReqType::AddParticipant(user_name)) = req {
                 println!("{} connected as {}", addr, user_name);
@@ -27,17 +28,27 @@ impl Handler {
                 });
                 self.messages.push(WhatsUp::NewParticipant(user_name));
 
-                return bincode::serialize(&true).unwrap();
+                return bincode::serialize(
+                    &self
+                        .participants
+                        .iter()
+                        .map(|el| el.name.clone())
+                        .collect::<Vec<_>>(),
+                )
+                .unwrap();
             }
+
             return bincode::serialize(&ServerErr::PermissionDenied).unwrap();
         }
 
         let (user_name_auth, req_type) = authorized_req.unwrap();
-        let user = self.participants.iter().find(|user| user.ip == addr.ip());
+        let user_match_to_ip = self.participants.iter().find(|user| user.ip == addr.ip());
 
-        if user.is_none() || user.unwrap().name == user_name_auth {
+        if user_match_to_ip.is_none() || user_match_to_ip.unwrap().name != user_name_auth {
             return bincode::serialize(&ServerErr::BadUser).unwrap();
         }
+
+        let Participant { name, .. } = user_match_to_ip.unwrap();
 
         // ██████╗  █████╗ ██████╗ ███████╗██╗███╗   ██╗ ██████╗      ██████╗ ██████╗ ██████╗ ██████╗ ███████╗ ██████╗████████╗    ██████╗ ███████╗ ██████╗ ██╗   ██╗███████╗███████╗████████╗
         // ██╔══██╗██╔══██╗██╔══██╗██╔════╝██║████╗  ██║██╔════╝     ██╔════╝██╔═══██╗██╔══██╗██╔══██╗██╔════╝██╔════╝╚══██╔══╝    ██╔══██╗██╔════╝██╔═══██╗██║   ██║██╔════╝██╔════╝╚══██╔══╝
@@ -52,32 +63,12 @@ impl Handler {
                 bincode::serialize(&true)
             }
             ReqType::SendMessage(msg) => {
-                // println!("{}", msg);
+                let news = WhatsUp::NewMessage((name.clone(), msg));
+                println!("{}", news);
+                self.messages.push(news);
                 bincode::serialize(&true)
             }
         }
         .unwrap()
     }
 }
-
-// if self.participants.iter().any(|el| el.name.clone() == name) {
-//     bincode::serialize(&false)
-// } else {
-//     println!("User connected: {}", name);
-
-//     self.participants.push(Participant { name, ip: user_ip });
-
-//     bincode::serialize(&true)
-// }
-
-/* match user {
-    None => bincode::serialize(&ServerErr::UnknownUser),
-    Some(user) => {
-        let Participant { name, .. } = user;
-
-        println!("{}: {}", name, msg);
-
-        self.messages.push((name.clone(), msg));
-        bincode::serialize(&true)
-    }
-}, */
