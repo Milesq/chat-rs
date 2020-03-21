@@ -37,12 +37,13 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
                         if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
                             packet_config = Default::default();
 
-                            let mut buf = handle_request::handler(buf);
-                            buf.resize(crate::PACKET_SIZE, 0);
+                            let packet = handle_request::handler(buf);
 
-                            socket.write_all(&buf).unwrap_or_else(|err| {
-                                println!("Send response error: {:?}", err);
-                            });
+                            for part in prepare_to_send(packet) {
+                                socket.write_all(&part[..]).unwrap_or_else(|err| {
+                                    println!("Send response error: {:?}", err);
+                                });
+                            }
                         }
                     }
                     Err(ref err) if err.kind() == ErrorKind::WouldBlock => (),

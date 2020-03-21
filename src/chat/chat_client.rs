@@ -27,11 +27,16 @@ pub fn run_client(
         .set_nonblocking(true)
         .expect("failed to initiate non-blocking");
 
+    let mut packet_config = PreparePacketConfig::new();
+
     thread::spawn(move || loop {
         let mut buf = vec![0; crate::PACKET_SIZE];
         match client.read_exact(&mut buf) {
             Ok(_) => {
-                println!("message recv {:?}", buf);
+                if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
+                    packet_config = Default::default();
+                    println!("{:?}", buf);
+                }
             }
             Err(ref err) if err.kind() == ErrorKind::WouldBlock => (),
             Err(_) => {
