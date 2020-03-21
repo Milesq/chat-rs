@@ -11,7 +11,7 @@ use {
 use super::prepare_request::*;
 
 pub fn run_client(
-    name: &str,
+    name: String,
     server_ip: SocketAddr,
 ) -> io::Result<(Sender<String>, Receiver<WhatsUp>)> {
     let (tx_raw_msg, rx_raw_msg) = channel::<Vec<u8>>();
@@ -47,8 +47,11 @@ pub fn run_client(
 
         match rx_user_msg.try_recv() {
             Ok(msg) => {
-                let packet =
-                    bincode::serialize(&ReqType::SendMessage(msg.trim().to_string())).unwrap();
+                let packet = bincode::serialize(&(
+                    name.clone(),
+                    ReqType::SendMessage(msg.trim().to_string()),
+                ))
+                .unwrap();
                 tx_raw_msg.send(packet).expect("Cannot pass data to sender");
             }
             Err(TryRecvError::Empty) => (),
@@ -57,9 +60,7 @@ pub fn run_client(
 
         match rx_raw_msg.try_recv() {
             Ok(packet) => {
-                let x = prepare_to_send(packet);
-                println!("{:?}", x);
-                for packet in x {
+                for packet in prepare_to_send(packet) {
                     client
                         .write_all(&packet[..])
                         .expect("Cannot send TCP packet");

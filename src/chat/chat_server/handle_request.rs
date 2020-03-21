@@ -12,7 +12,6 @@ impl Handler {
     }
 
     pub fn handler(&mut self, data: Vec<u8>, addr: SocketAddr) -> Vec<u8> {
-        println!("{:?}", data);
         let req = bincode::deserialize::<ReqType>(&data[..]);
         let authorized_req = bincode::deserialize::<AuthorizedReq>(&data[..]);
 
@@ -34,7 +33,11 @@ impl Handler {
         }
 
         let (user_name_auth, req_type) = authorized_req.unwrap();
-        println!("{}\n\n{}", user_name_auth, addr);
+        let user = self.participants.iter().find(|user| user.ip == addr.ip());
+
+        if user.is_none() || user.unwrap().name == user_name_auth {
+            return bincode::serialize(&ServerErr::BadUser).unwrap();
+        }
 
         // ██████╗  █████╗ ██████╗ ███████╗██╗███╗   ██╗ ██████╗      ██████╗ ██████╗ ██████╗ ██████╗ ███████╗ ██████╗████████╗    ██████╗ ███████╗ ██████╗ ██╗   ██╗███████╗███████╗████████╗
         // ██╔══██╗██╔══██╗██╔══██╗██╔════╝██║████╗  ██║██╔════╝     ██╔════╝██╔═══██╗██╔══██╗██╔══██╗██╔════╝██╔════╝╚══██╔══╝    ██╔══██╗██╔════╝██╔═══██╗██║   ██║██╔════╝██╔════╝╚══██╔══╝
@@ -49,7 +52,7 @@ impl Handler {
                 bincode::serialize(&true)
             }
             ReqType::SendMessage(msg) => {
-                println!("{}", msg);
+                // println!("{}", msg);
                 bincode::serialize(&true)
             }
         }

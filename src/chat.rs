@@ -68,7 +68,7 @@ pub fn run_chat(name: &str, port: u16) -> io::Result<()> {
                     let server_socket =
                         SocketAddr::from((server_ip.parse::<Ipv4Addr>().unwrap(), port));
 
-                    let (tx, new_msg) = run_client(name, server_socket)?;
+                    let (tx, new_msg) = run_client(name.to_string(), server_socket)?;
                     message_sender = Some(tx);
 
                     thread::spawn(move || loop {
