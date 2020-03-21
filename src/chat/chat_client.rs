@@ -47,7 +47,8 @@ pub fn run_client(
 
         match rx_user_msg.try_recv() {
             Ok(msg) => {
-                let packet = bincode::serialize(&ReqType::SendMessage(msg)).unwrap();
+                let packet =
+                    bincode::serialize(&ReqType::SendMessage(msg.trim().to_string())).unwrap();
                 tx_raw_msg.send(packet).expect("Cannot pass data to sender");
             }
             Err(TryRecvError::Empty) => (),
@@ -56,7 +57,9 @@ pub fn run_client(
 
         match rx_raw_msg.try_recv() {
             Ok(packet) => {
-                for packet in prepare_to_send(packet) {
+                let x = prepare_to_send(packet);
+                println!("{:?}", x);
+                for packet in x {
                     client
                         .write_all(&packet[..])
                         .expect("Cannot send TCP packet");

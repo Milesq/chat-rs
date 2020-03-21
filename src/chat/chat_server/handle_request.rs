@@ -12,6 +12,7 @@ impl Handler {
     }
 
     pub fn handler(&mut self, data: Vec<u8>, addr: SocketAddr) -> Vec<u8> {
+        println!("{:?}", data);
         let req = bincode::deserialize::<ReqType>(&data[..]);
         let authorized_req = bincode::deserialize::<AuthorizedReq>(&data[..]);
 
@@ -19,7 +20,7 @@ impl Handler {
             return bincode::serialize(&ServerErr::ErrBadRequest400).unwrap();
         }
         if req.is_ok() {
-            if let ReqType::AddParticipant(user_name) = req.unwrap() {
+            if let Ok(ReqType::AddParticipant(user_name)) = req {
                 println!("{} connected as {}", addr, user_name);
                 self.participants.push(Participant {
                     name: user_name.clone(),

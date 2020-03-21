@@ -38,9 +38,14 @@ pub fn prepare_to_receive(part: Vec<u8>, config: &mut PreparePacketConfig) -> Op
     }
 
     if config.length > 0 {
-        config.length -= part.len();
-        config.packet.extend(part);
-        None
+        if part.len() > config.length {
+            config.packet.extend(Vec::from(&part[0..config.length]));
+            Some(config.packet.clone())
+        } else {
+            config.length -= part.len();
+            config.packet.extend(part);
+            None
+        }
     } else {
         Some(config.packet.clone())
     }
