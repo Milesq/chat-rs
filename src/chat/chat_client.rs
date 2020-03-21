@@ -8,7 +8,7 @@ use {
     },
 };
 
-const MAX: usize = std::u8::MAX as usize;
+use super::prepare_request::*;
 
 pub fn run_client(
     name: &str,
@@ -51,7 +51,7 @@ pub fn run_client(
 
         match rx_raw_msg.try_recv() {
             Ok(packet) => {
-                for packet in prepare_packet(packet) {
+                for packet in prepare_to_send(packet) {
                     client
                         .write_all(&packet[..])
                         .expect("Cannot send TCP packet");
@@ -65,30 +65,4 @@ pub fn run_client(
     });
 
     Ok((tx_user_msg, rx_ext_msg))
-}
-
-fn prepare_packet(packet: Vec<u8>) -> Vec<Vec<u8>> {
-    let mut ret = Vec::new();
-    let mut len = packet.len();
-
-    while len > MAX {
-        len -= MAX;
-        ret.push(MAX as u8);
-    }
-
-    ret.push(len as u8);
-    ret.push(0);
-
-    ret.extend(packet);
-
-    let mut ret = ret
-        .chunks(crate::PACKET_SIZE)
-        .map(|el| Vec::from(el))
-        .collect::<Vec<_>>();
-
-    for el in &mut ret {
-        el.resize(crate::PACKET_SIZE, 0);
-    }
-
-    ret
 }

@@ -8,6 +8,8 @@ use std::{
 mod comunication_types;
 use comunication_types as types;
 
+mod prepare_request;
+
 mod chat_client;
 mod chat_server;
 
