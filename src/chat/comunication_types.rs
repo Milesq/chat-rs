@@ -1,16 +1,19 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum ReqType {
     AddParticipant(String),
     SendMessage(String),
 }
 
+pub type AuthorizedReq = (String, ReqType);
+
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ServerErr {
     ErrBadRequest400,
     UnknownUser,
+    PermissionDenied,
 }
 
 pub type Participants = Vec<String>;

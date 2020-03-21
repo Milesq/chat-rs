@@ -37,7 +37,7 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
                         if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
                             packet_config = Default::default();
 
-                            let packet = handle_request::handler(buf);
+                            let packet = handle_request::handler(buf, addr);
 
                             for part in prepare_to_send(packet) {
                                 socket.write_all(&part[..]).unwrap_or_else(|err| {
