@@ -5,6 +5,8 @@ use std::{
     thread,
 };
 
+use super::types::*;
+
 mod handle_request;
 use handle_request::Handler;
 
@@ -30,12 +32,12 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
             let tcp_handler = Arc::clone(&tcp_handler);
             thread::spawn(move || loop {
                 let mut buf = vec![0; crate::PACKET_SIZE];
+                let mut tcp_handler = tcp_handler.lock().unwrap();
 
                 match socket.read_exact(&mut buf) {
                     Ok(_) => {
                         if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
                             packet_config = Default::default();
-                            let mut tcp_handler = tcp_handler.lock().unwrap();
 
                             let packet = (*tcp_handler).handler(buf, addr);
 
@@ -48,6 +50,9 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
                     }
                     Err(ref err) if err.kind() == ErrorKind::WouldBlock => (),
                     Err(_) => {
+                        (*tcp_handler)
+                            .messages
+                            .push(WhatsUp::ParticipantDisconected("".into()));
                         println!("closing connection with: {}", addr);
                         break;
                     }
