@@ -1,6 +1,6 @@
 use std::{
     io::{self, ErrorKind, Read, Write},
-    net::TcpListener,
+    net::{SocketAddr, TcpListener},
     sync::{Arc, Mutex},
     thread,
 };
@@ -50,9 +50,12 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
                     }
                     Err(ref err) if err.kind() == ErrorKind::WouldBlock => (),
                     Err(_) => {
+                        let users = (*tcp_handler).participants.clone();
                         (*tcp_handler)
                             .messages
-                            .push(WhatsUp::ParticipantDisconected("".into()));
+                            .push(WhatsUp::ParticipantDisconected(match_user_name_with_ip(
+                                addr, users,
+                            )));
                         println!("closing connection with: {}", addr);
                         break;
                     }
@@ -68,4 +71,12 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
     Ok(&|| unsafe {
         SHUTDOWN = true;
     })
+}
+
+fn match_user_name_with_ip(addr: SocketAddr, users: Vec<Participant>) -> String {
+    users
+        .iter()
+        .find(|user| user.ip == addr)
+        .map(|user| user.name.clone())
+        .unwrap_or("Unknown".to_string())
 }

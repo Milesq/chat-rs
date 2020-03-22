@@ -17,7 +17,7 @@ pub fn run_client(
     // let mut participants = Vec::new();
     let (tx_raw_msg, rx_raw_msg) = channel::<Vec<u8>>();
     let (tx_user_msg, rx_user_msg) = channel::<String>();
-    let (tx_ext_msg, rx_ext_msg) = channel::<WhatsUp>();
+    let (_tx_ext_msg, rx_ext_msg) = channel::<WhatsUp>();
 
     tx_raw_msg
         .send(bincode::serialize(&ReqType::AddParticipant(name.to_string())).unwrap())

@@ -17,6 +17,7 @@ pub enum ServerErr {
     PermissionDenied,
 }
 
+#[derive(Clone)]
 pub struct Participant {
     pub name: String,
     pub ip: SocketAddr,

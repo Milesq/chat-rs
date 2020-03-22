@@ -13,7 +13,7 @@ where
 #[derive(Default)]
 pub struct Handler {
     pub(super) messages: Vec<WhatsUp>,
-    participants: Vec<Participant>,
+    pub(super) participants: Vec<Participant>,
 }
 
 impl Handler {
