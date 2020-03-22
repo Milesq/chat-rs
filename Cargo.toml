@@ -7,3 +7,5 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0.104", features = ["derive"] }
 bincode = "1.2.1"
+dirs = "2.0.2"
+dialoguer = "0.5.0"
