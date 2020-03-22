@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{fmt, net::IpAddr};
+use std::{fmt, net::SocketAddr};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum ReqType {
@@ -19,7 +19,7 @@ pub enum ServerErr {
 
 pub struct Participant {
     pub name: String,
-    pub ip: IpAddr,
+    pub ip: SocketAddr,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

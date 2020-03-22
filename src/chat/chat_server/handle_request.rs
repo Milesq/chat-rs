@@ -1,5 +1,15 @@
 use {super::super::types::*, std::net::SocketAddr};
 
+type ServerErrResult<T> = Result<T, ServerErr>;
+
+#[inline]
+fn serialize<T>(value: &ServerErrResult<T>) -> Vec<u8>
+where
+    T: serde::Serialize,
+{
+    bincode::serialize::<ServerErrResult<T>>(value).unwrap()
+}
+
 #[derive(Default)]
 pub struct Handler {
     messages: Vec<WhatsUp>,
@@ -16,7 +26,7 @@ impl Handler {
         let authorized_req = bincode::deserialize::<AuthorizedReq>(&data[..]);
 
         if req.is_err() && authorized_req.is_err() {
-            return bincode::serialize(&ServerErr::ErrBadRequest400).unwrap();
+            return serialize::<()>(&Err(ServerErr::ErrBadRequest400));
         }
 
         if req.is_ok() {
@@ -24,28 +34,27 @@ impl Handler {
                 println!("{} connected as {}", addr, user_name);
                 self.participants.push(Participant {
                     name: user_name.clone(),
-                    ip: addr.ip(),
+                    ip: addr,
                 });
                 self.messages.push(WhatsUp::NewParticipant(user_name));
 
-                return bincode::serialize(
-                    &self
-                        .participants
-                        .iter()
-                        .map(|el| el.name.clone())
-                        .collect::<Vec<_>>(),
-                )
-                .unwrap();
+                let participants = &self
+                    .participants
+                    .iter()
+                    .map(|el| el.name.clone())
+                    .collect::<Vec<_>>();
+
+                return serialize(&Ok(participants));
             }
 
-            return bincode::serialize(&ServerErr::PermissionDenied).unwrap();
+            return serialize::<()>(&Err(ServerErr::PermissionDenied));
         }
 
         let (user_name_auth, req_type) = authorized_req.unwrap();
-        let user_match_to_ip = self.participants.iter().find(|user| user.ip == addr.ip());
+        let user_match_to_ip = self.participants.iter().find(|user| user.ip == addr);
 
         if user_match_to_ip.is_none() || user_match_to_ip.unwrap().name != user_name_auth {
-            return bincode::serialize(&ServerErr::BadUser).unwrap();
+            return serialize::<()>(&Err(ServerErr::BadUser));
         }
 
         let Participant { name, .. } = user_match_to_ip.unwrap();
@@ -60,15 +69,14 @@ impl Handler {
         match req_type {
             ReqType::AddParticipant(name) => {
                 println!("New Participant: {}", name);
-                bincode::serialize(&true)
+                serialize(&Ok(()))
             }
             ReqType::SendMessage(msg) => {
                 let news = WhatsUp::NewMessage((name.clone(), msg));
                 println!("{}", news);
                 self.messages.push(news);
-                bincode::serialize(&true)
+                serialize(&Ok(()))
             }
         }
-        .unwrap()
     }
 }

@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io::{self, Write};
 
 mod chat;
 mod utils;
@@ -11,7 +11,11 @@ fn sleep() {
 const PACKET_SIZE: usize = 32;
 
 fn main() {
-    chat::run_chat("Milesq", 6000).unwrap_or_else(|err| {
+    println!("Podaj nick: ");
+    let mut nick = String::new();
+    io::stdin().read_line(&mut nick).unwrap();
+
+    chat::run_chat(nick.trim(), 6000).unwrap_or_else(|err| {
         utils::open_file("error-log.txt")
             .unwrap()
             .write_all(err.to_string().as_bytes())
