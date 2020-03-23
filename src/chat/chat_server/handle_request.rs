@@ -11,12 +11,7 @@ impl Handler {
         Default::default()
     }
 
-    pub fn handler(
-        &mut self,
-        data: Vec<u8>,
-        addr: SocketAddr,
-        on_new_msg: &dyn Fn(WhatsUp),
-    ) -> ServerResponse {
+    pub fn handler(&mut self, data: Vec<u8>, addr: SocketAddr) -> ServerResponse {
         let req = bincode::deserialize::<ReqType>(&data[..]);
         let authorized_req = bincode::deserialize::<AuthorizedReq>(&data[..]);
 
@@ -32,7 +27,6 @@ impl Handler {
                 });
                 let news = WhatsUp::NewParticipant(user_name);
                 self.messages.push(news.clone());
-                on_new_msg(news);
 
                 let participants = &self
                     .participants
@@ -69,7 +63,10 @@ impl Handler {
                 println!("{}", news);
 
                 self.messages.push(news.clone());
-                on_new_msg(news);
+                Ok(WhatsUp::Nothing)
+            }
+            ReqType::WhatsUp(ptr) => {
+                println!("{:?} {}", self.messages, ptr);
                 Ok(WhatsUp::Nothing)
             }
         }

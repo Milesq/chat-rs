@@ -38,9 +38,7 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
                         if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
                             packet_config = Default::default();
 
-                            let response = (*tcp_handler).handler(buf, addr, &|news| {
-                                println!("Send to every one: {}", news);
-                            });
+                            let response = (*tcp_handler).handler(buf, addr);
 
                             let packet = bincode::serialize(&response).unwrap();
 
@@ -54,12 +52,10 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
                     Err(ref err) if err.kind() == ErrorKind::WouldBlock => (),
                     Err(_) => {
                         let users = (*tcp_handler).participants.clone();
-                        (*tcp_handler)
-                            .messages
-                            .push(WhatsUp::ParticipantDisconected(match_user_name_with_ip(
-                                addr, users,
-                            )));
-                        println!("closing connection with: {}", addr);
+                        let news =
+                            WhatsUp::ParticipantDisconected(match_user_name_with_ip(addr, users));
+                        println!("{}", news);
+                        (*tcp_handler).messages.push(news);
                         break;
                     }
                 }

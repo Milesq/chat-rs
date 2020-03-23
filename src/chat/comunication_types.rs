@@ -7,6 +7,7 @@ pub type AuthorizedReq = (String, ReqType);
 pub enum ReqType {
     AddParticipant(String),
     SendMessage(String),
+    WhatsUp(usize),
 }
 
 pub type ServerResponse = Result<WhatsUp, ServerErr>;
@@ -17,6 +18,7 @@ pub enum WhatsUp {
     NewMessage((String, String)),
     ParticipantDisconected(String),
     ParticipantsList(Vec<String>),
+    News(Vec<WhatsUp>),
     Nothing,
 }
 
@@ -39,13 +41,14 @@ impl fmt::Display for WhatsUp {
         use WhatsUp::*;
 
         let string = match self {
-            NewParticipant(name) => format!("{} has joined!", name),
-            NewMessage((user, msg)) => format!("[{}]: {}", user, msg),
-            ParticipantDisconected(name) => format!("{} has disconnected", name),
+            NewParticipant(name) => Ok(format!("{} has joined!", name)),
+            NewMessage((user, msg)) => Ok(format!("[{}]: {}", user, msg)),
+            ParticipantDisconected(name) => Ok(format!("{} has disconnected", name)),
 
-            ParticipantsList(_) => "".into(),
-            Nothing => "".into(),
+            ParticipantsList(_) => Err(fmt::Error),
+            Nothing => Err(fmt::Error),
+            News(_) => Err(fmt::Error),
         };
-        write!(f, "{}", string)
+        write!(f, "{}", string?)
     }
 }

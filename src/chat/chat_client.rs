@@ -14,7 +14,9 @@ pub fn run_client(
     name: String,
     server_ip: SocketAddr,
 ) -> io::Result<(Sender<String>, Receiver<WhatsUp>)> {
-    // let mut participants = Vec::new();
+    let mut participants = Vec::new();
+    let messages = Vec::new();
+
     let (tx_raw_msg, rx_raw_msg) = channel::<Vec<u8>>();
     let (tx_user_msg, rx_user_msg) = channel::<String>();
     let (_tx_ext_msg, rx_ext_msg) = channel::<WhatsUp>();
@@ -30,6 +32,11 @@ pub fn run_client(
 
     let mut packet_config = PreparePacketConfig::new();
 
+    thread::spawn(|| {
+        let req = ReqType::WhatsUp(messages.len());
+        tx_raw_msg.send(bincode::serialize(&req).unwrap()).unwrap();
+    });
+
     thread::spawn(move || loop {
         let mut buf = vec![0; crate::PACKET_SIZE];
         match client.read_exact(&mut buf) {
@@ -37,9 +44,9 @@ pub fn run_client(
                 // println!("{:?}", buf);
                 if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
                     packet_config = Default::default();
-                    let resp = bincode::deserialize::<ServerResponse>(&buf);
-                    // .expect("Expected new messages")
-                    // .expect("Server error");
+                    let resp = bincode::deserialize::<ServerResponse>(&buf)
+                        .expect("Expected new messages")
+                        .expect("Server error");
 
                     println!("Server response: {:?}", resp);
                     // tx_ext_msg.send(resp).unwrap();
