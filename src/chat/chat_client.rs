@@ -30,57 +30,54 @@ pub fn run_client(
 
     let mut packet_config = PreparePacketConfig::new();
 
-    thread::spawn(move || {
-        let on_recv: Option<&dyn Fn(Vec<u8>)> = Some(&|a| {
-            let participants = bincode::deserialize::<Result<Vec<String>, ServerErr>>(&a);
-            println!("{:?}", participants);
-        });
+    thread::spawn(move || loop {
+        let mut buf = vec![0; crate::PACKET_SIZE];
+        match client.read_exact(&mut buf) {
+            Ok(_) => {
+                // println!("{:?}", buf);
+                if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
+                    packet_config = Default::default();
+                    let resp = bincode::deserialize::<ServerResponse>(&buf);
+                    // .expect("Expected new messages")
+                    // .expect("Server error");
 
-        loop {
-            let mut buf = vec![0; crate::PACKET_SIZE];
-            match client.read_exact(&mut buf) {
-                Ok(_) => {
-                    if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
-                        packet_config = Default::default();
-                        if let Some(on_recv) = on_recv {
-                            on_recv(buf);
-                        }
-                    }
-                }
-                Err(ref err) if err.kind() == ErrorKind::WouldBlock => (),
-                Err(_) => {
-                    println!("connection with server was severed");
-                    break;
+                    println!("Server response: {:?}", resp);
+                    // tx_ext_msg.send(resp).unwrap();
                 }
             }
-
-            match rx_user_msg.try_recv() {
-                Ok(msg) => {
-                    let packet = bincode::serialize(&(
-                        name.clone(),
-                        ReqType::SendMessage(msg.trim().to_string()),
-                    ))
-                    .unwrap();
-                    tx_raw_msg.send(packet).expect("Cannot pass data to sender");
-                }
-                Err(TryRecvError::Empty) => (),
-                Err(TryRecvError::Disconnected) => break,
+            Err(ref err) if err.kind() == ErrorKind::WouldBlock => (),
+            Err(_) => {
+                println!("connection with server was severed");
+                break;
             }
-
-            match rx_raw_msg.try_recv() {
-                Ok(packet) => {
-                    for packet in prepare_to_send(packet) {
-                        client
-                            .write_all(&packet[..])
-                            .expect("Cannot send TCP packet");
-                    }
-                }
-                Err(TryRecvError::Empty) => (),
-                Err(TryRecvError::Disconnected) => break,
-            }
-
-            crate::sleep();
         }
+
+        match rx_user_msg.try_recv() {
+            Ok(msg) => {
+                let packet = bincode::serialize(&(
+                    name.clone(),
+                    ReqType::SendMessage(msg.trim().to_string()),
+                ))
+                .unwrap();
+                tx_raw_msg.send(packet).expect("Cannot pass data to sender");
+            }
+            Err(TryRecvError::Empty) => (),
+            Err(TryRecvError::Disconnected) => break,
+        }
+
+        match rx_raw_msg.try_recv() {
+            Ok(packet) => {
+                for packet in prepare_to_send(packet) {
+                    client
+                        .write_all(&packet[..])
+                        .expect("Cannot send TCP packet");
+                }
+            }
+            Err(TryRecvError::Empty) => (),
+            Err(TryRecvError::Disconnected) => break,
+        }
+
+        crate::sleep();
     });
 
     Ok((tx_user_msg, rx_ext_msg))

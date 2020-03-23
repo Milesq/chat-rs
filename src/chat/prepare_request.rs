@@ -1,6 +1,6 @@
 const MAX: usize = std::u8::MAX as usize;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct PreparePacketConfig {
     pub packet: Vec<u8>,
     pub length: usize,
@@ -19,7 +19,7 @@ pub fn prepare_to_receive(part: Vec<u8>, config: &mut PreparePacketConfig) -> Op
 
         if let Some(n) = part.iter().position(|&el| el == 0) {
             let tail = &part[(n + 1)..];
-            config.length += sum(Vec::from(&part[..n]));
+            config.length += sum(&Vec::from(&part[..n]));
             config.packet.extend(tail);
 
             if tail.len() > config.length {
@@ -31,10 +31,8 @@ pub fn prepare_to_receive(part: Vec<u8>, config: &mut PreparePacketConfig) -> Op
                 config.is_length_calculated = true;
             }
         } else {
-            config.length += sum(part);
+            config.length += sum(&part);
         }
-
-        return None;
     }
 
     if config.length > 0 {
@@ -77,6 +75,6 @@ pub fn prepare_to_send(packet: Vec<u8>) -> Vec<Vec<u8>> {
     ret
 }
 
-fn sum(v: Vec<u8>) -> usize {
+fn sum(v: &Vec<u8>) -> usize {
     v.iter().fold(0usize, |acc, x| acc + *x as usize)
 }

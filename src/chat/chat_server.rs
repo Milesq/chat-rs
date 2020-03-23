@@ -26,7 +26,6 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
         }
 
         if let Ok((mut socket, addr)) = server.accept() {
-            println!("Client {} connected", addr);
             let mut packet_config = PreparePacketConfig::new();
 
             let tcp_handler = Arc::clone(&tcp_handler);
@@ -39,7 +38,11 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
                         if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
                             packet_config = Default::default();
 
-                            let packet = (*tcp_handler).handler(buf, addr);
+                            let response = (*tcp_handler).handler(buf, addr, &|news| {
+                                println!("Send to every one: {}", news);
+                            });
+
+                            let packet = bincode::serialize(&response).unwrap();
 
                             for part in prepare_to_send(packet) {
                                 socket.write_all(&part[..]).unwrap_or_else(|err| {

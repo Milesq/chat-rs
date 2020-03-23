@@ -21,6 +21,7 @@ const HELP_MSG: &str = "Commands:
 - c or close - close connection with a server
 - # or join - join to server
 - @ or prv - send private message to user
+- l or : - list users
 - ! or create - create server
 - ? - show this help message
 
