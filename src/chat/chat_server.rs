@@ -41,8 +41,9 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
                             let response = (*tcp_handler).handler(buf, addr);
 
                             let packet = bincode::serialize(&response).unwrap();
+                            println!("{:?} {:?}", response, packet);
 
-                            for part in prepare_to_send(packet) {
+                            for part in prepare_to_send(packet.clone()) {
                                 socket.write_all(&part[..]).unwrap_or_else(|err| {
                                     println!("Send response error: {:?}", err);
                                 });

@@ -11,44 +11,44 @@ impl Handler {
         Default::default()
     }
 
-    pub fn handler(&mut self, data: Vec<u8>, addr: SocketAddr) -> ServerResponse {
-        let req = bincode::deserialize::<ReqType>(&data[..]);
-        let authorized_req = bincode::deserialize::<AuthorizedReq>(&data[..]);
+    pub fn handler(&mut self, data: Vec<u8>, addr: SocketAddr) -> Response {
+        let req = bincode::deserialize::<Request>(&data[..]);
 
-        if req.is_err() && authorized_req.is_err() {
+        if req.is_err() {
             return Err(ServerErr::ErrBadRequest400);
         }
 
-        if req.is_ok() {
-            if let Ok(ReqType::AddParticipant(user_name)) = req {
-                self.participants.push(Participant {
-                    name: user_name.clone(),
-                    ip: addr,
-                });
-                let news = WhatsUp::NewParticipant(user_name);
-                self.messages.push(news.clone());
+        let Request {
+            user_name,
+            req_type,
+        } = req.unwrap();
 
-                let participants = &self
-                    .participants
-                    .iter()
-                    .map(|el| el.name.clone())
-                    .collect::<Vec<_>>();
+        let user_match_to_ip = self.participants.iter().find(|user| user.ip == addr);
 
-                return Ok(WhatsUp::ParticipantsList(participants.to_vec()));
-            }
+        if req_type == ReqType::AddParticipant && user_match_to_ip.is_none() {
+            self.participants.push(Participant {
+                name: user_name.clone(),
+                ip: addr,
+            });
+            let news = WhatsUp::NewParticipant(user_name);
+            println!("{}", news);
+            self.messages.push(news);
 
+            let participants = &self
+                .participants
+                .iter()
+                .map(|el| el.name.clone())
+                .collect::<Vec<_>>();
+            return Ok(WhatsUp::ParticipantsList(participants.to_vec()));
+        }
+
+        if user_match_to_ip.is_none() {
             return Err(ServerErr::PermissionDenied);
         }
 
-        let (user_name_auth, req_type) = authorized_req.unwrap();
-        let user_match_to_ip = self.participants.iter().find(|user| user.ip == addr);
-
-        if user_match_to_ip.is_none() || user_match_to_ip.unwrap().name != user_name_auth {
+        if user_match_to_ip.unwrap().name != user_name {
             return Err(ServerErr::BadUser);
         }
-
-        let Participant { name, .. } = user_match_to_ip.unwrap();
-
         // ██████╗  █████╗ ██████╗ ███████╗██╗███╗   ██╗ ██████╗      ██████╗ ██████╗ ██████╗ ██████╗ ███████╗ ██████╗████████╗    ██████╗ ███████╗ ██████╗ ██╗   ██╗███████╗███████╗████████╗
         // ██╔══██╗██╔══██╗██╔══██╗██╔════╝██║████╗  ██║██╔════╝     ██╔════╝██╔═══██╗██╔══██╗██╔══██╗██╔════╝██╔════╝╚══██╔══╝    ██╔══██╗██╔════╝██╔═══██╗██║   ██║██╔════╝██╔════╝╚══██╔══╝
         // ██████╔╝███████║██████╔╝███████╗██║██╔██╗ ██║██║  ███╗    ██║     ██║   ██║██████╔╝██████╔╝█████╗  ██║        ██║       ██████╔╝█████╗  ██║   ██║██║   ██║█████╗  ███████╗   ██║
@@ -57,18 +57,21 @@ impl Handler {
         // ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝      ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝   ╚═╝       ╚═╝  ╚═╝╚══════╝ ╚══▀▀═╝  ╚═════╝ ╚══════╝╚══════╝   ╚═╝
 
         match req_type {
-            ReqType::AddParticipant(_) => Err(ServerErr::PermissionDenied),
             ReqType::SendMessage(msg) => {
-                let news = WhatsUp::NewMessage((name.clone(), msg));
+                let news = WhatsUp::NewMessage((user_name.clone(), msg));
                 println!("{}", news);
 
                 self.messages.push(news.clone());
                 Ok(WhatsUp::Nothing)
             }
             ReqType::WhatsUp(ptr) => {
-                println!("{:?} {}", self.messages, ptr);
-                Ok(WhatsUp::Nothing)
+                if self.messages.len() < ptr {
+                    Ok(WhatsUp::Nothing)
+                } else {
+                    Ok(WhatsUp::News(self.messages[ptr..].to_vec()))
+                }
             }
+            _ => Ok(WhatsUp::Nothing),
         }
     }
 }

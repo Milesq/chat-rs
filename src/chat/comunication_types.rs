@@ -1,16 +1,20 @@
 use serde::{Deserialize, Serialize};
 use std::{fmt, net::SocketAddr};
 
-pub type AuthorizedReq = (String, ReqType);
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct Request {
+    pub user_name: String,
+    pub req_type: ReqType,
+}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum ReqType {
-    AddParticipant(String),
+    AddParticipant,
     SendMessage(String),
     WhatsUp(usize),
 }
 
-pub type ServerResponse = Result<WhatsUp, ServerErr>;
+pub type Response = Result<WhatsUp, ServerErr>;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum WhatsUp {
