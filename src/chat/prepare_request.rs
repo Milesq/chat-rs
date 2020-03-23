@@ -33,6 +33,8 @@ pub fn prepare_to_receive(part: Vec<u8>, config: &mut PreparePacketConfig) -> Op
         } else {
             config.length += sum(&part);
         }
+
+        return None;
     }
 
     if config.length > 0 {
