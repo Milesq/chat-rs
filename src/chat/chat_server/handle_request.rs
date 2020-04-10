@@ -11,11 +11,11 @@ impl Handler {
         Default::default()
     }
 
-    pub fn handler(&mut self, data: Vec<u8>, addr: SocketAddr) -> Response {
+    pub fn handler(&mut self, data: Vec<u8>, addr: SocketAddr) -> Option<Response> {
         let req = bincode::deserialize::<Request>(&data[..]);
 
         if req.is_err() {
-            return Err(ServerErr::ErrBadRequest400);
+            return Some(Err(ServerErr::ErrBadRequest400));
         }
 
         let Request {
@@ -39,15 +39,15 @@ impl Handler {
                 .iter()
                 .map(|el| el.name.clone())
                 .collect::<Vec<_>>();
-            return Ok(WhatsUp::ParticipantsList(participants.to_vec()));
+            return Some(Ok(WhatsUp::ParticipantsList(participants.to_vec())));
         }
 
         if user_match_to_ip.is_none() {
-            return Err(ServerErr::PermissionDenied);
+            return Some(Err(ServerErr::PermissionDenied));
         }
 
         if user_match_to_ip.unwrap().name != user_name {
-            return Err(ServerErr::BadUser);
+            return Some(Err(ServerErr::BadUser));
         }
         // ██████╗  █████╗ ██████╗ ███████╗██╗███╗   ██╗ ██████╗      ██████╗ ██████╗ ██████╗ ██████╗ ███████╗ ██████╗████████╗    ██████╗ ███████╗ ██████╗ ██╗   ██╗███████╗███████╗████████╗
         // ██╔══██╗██╔══██╗██╔══██╗██╔════╝██║████╗  ██║██╔════╝     ██╔════╝██╔═══██╗██╔══██╗██╔══██╗██╔════╝██╔════╝╚══██╔══╝    ██╔══██╗██╔════╝██╔═══██╗██║   ██║██╔════╝██╔════╝╚══██╔══╝
@@ -62,16 +62,12 @@ impl Handler {
                 println!("{}", news);
 
                 self.messages.push(news.clone());
-                Ok(WhatsUp::Nothing)
+                None
             }
-            ReqType::WhatsUp(ptr) => {
-                if self.messages.len() < ptr {
-                    Ok(WhatsUp::Nothing)
-                } else {
-                    Ok(WhatsUp::News(self.messages[ptr..].to_vec()))
-                }
+            req_type => {
+                println!("Unexpected req type: {:?}", req_type);
+                None
             }
-            _ => Ok(WhatsUp::Nothing),
         }
     }
 }

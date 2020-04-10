@@ -76,7 +76,7 @@ pub fn run_chat(name: &str, port: u16) -> io::Result<()> {
                         // display new messages
                         match new_msg.try_recv() {
                             Ok(msg) => {
-                                println!("{}", msg);
+                                println!("{:?}", msg);
                             }
                             Err(TryRecvError::Empty) => (),
                             Err(TryRecvError::Disconnected) => break,

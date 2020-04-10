@@ -21,12 +21,11 @@ pub fn run_client(
     name: String,
     server_ip: SocketAddr,
 ) -> io::Result<(Sender<String>, Receiver<WhatsUp>)> {
-    // let mut participants = Vec::new();
-    let messages = Vec::<WhatsUp>::new();
+    let mut participants = Vec::new();
 
     let (tx_raw_msg, rx_raw_msg) = channel::<Vec<u8>>();
     let (tx_user_msg, rx_user_msg) = channel::<String>();
-    let (_tx_ext_msg, rx_ext_msg) = channel::<WhatsUp>();
+    let (tx_ext_msg, rx_ext_msg) = channel::<WhatsUp>();
 
     tx_raw_msg
         .send(serialize(&Request {
@@ -44,19 +43,6 @@ pub fn run_client(
 
     let mut packet_config = PreparePacketConfig::new();
 
-    let tx_raw_msg_whatsup = Arc::clone(&tx_raw_msg);
-    let name_whatsup = name.clone();
-    // thread::spawn(move || loop {
-    //     let tx_raw_msg = tx_raw_msg_whatsup.lock().unwrap();
-    //     let req = Request {
-    //         user_name: name_whatsup.clone(),
-    //         req_type: ReqType::WhatsUp(messages.len()),
-    //     };
-    //     (*tx_raw_msg).send(serialize(&req)).unwrap();
-
-    //     thread::sleep(std::time::Duration::from_millis(250));
-    // });
-
     let tx_raw_msg = Arc::clone(&tx_raw_msg);
     thread::spawn(move || loop {
         let mut buf = vec![0; crate::PACKET_SIZE];
@@ -68,8 +54,12 @@ pub fn run_client(
                         .expect("Expected new messages")
                         .expect("Server error");
 
-                    println!("{:?}", buf);
-                    // tx_ext_msg.send(resp).unwrap();
+                    match resp {
+                        WhatsUp::ParticipantsList(new_participants_array) => {
+                            participants = new_participants_array;
+                        }
+                        _ => tx_ext_msg.send(resp).unwrap(),
+                    }
                 }
             }
             Err(ref err) if err.kind() == ErrorKind::WouldBlock => (),
@@ -96,9 +86,6 @@ pub fn run_client(
 
         match rx_raw_msg.try_recv() {
             Ok(packet) => {
-                println!("{:?}", bincode::deserialize::<Request>(&packet[..]));
-                println!("{:?}", packet);
-
                 for packet in prepare_to_send(packet) {
                     client
                         .write_all(&packet[..])
