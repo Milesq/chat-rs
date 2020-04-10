@@ -46,23 +46,23 @@ pub fn run_client(
 
     let tx_raw_msg_whatsup = Arc::clone(&tx_raw_msg);
     let name_whatsup = name.clone();
-    thread::spawn(move || loop {
-        let tx_raw_msg = tx_raw_msg_whatsup.lock().unwrap();
-        let req = Request {
-            user_name: name_whatsup.clone(),
-            req_type: ReqType::WhatsUp(messages.len()),
-        };
-        (*tx_raw_msg).send(serialize(&req)).unwrap();
+    // thread::spawn(move || loop {
+    //     let tx_raw_msg = tx_raw_msg_whatsup.lock().unwrap();
+    //     let req = Request {
+    //         user_name: name_whatsup.clone(),
+    //         req_type: ReqType::WhatsUp(messages.len()),
+    //     };
+    //     (*tx_raw_msg).send(serialize(&req)).unwrap();
 
-        thread::sleep(std::time::Duration::from_millis(250));
-    });
+    //     thread::sleep(std::time::Duration::from_millis(250));
+    // });
 
     let tx_raw_msg = Arc::clone(&tx_raw_msg);
     thread::spawn(move || loop {
         let mut buf = vec![0; crate::PACKET_SIZE];
         match client.read_exact(&mut buf) {
             Ok(_) => {
-                if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
+                if let Some(buf) = packet_config.prepare_to_receive(buf) {
                     packet_config = Default::default();
                     let resp = bincode::deserialize::<Response>(&buf)
                         .expect("Expected new messages")
@@ -96,6 +96,9 @@ pub fn run_client(
 
         match rx_raw_msg.try_recv() {
             Ok(packet) => {
+                println!("{:?}", bincode::deserialize::<Request>(&packet[..]));
+                println!("{:?}", packet);
+
                 for packet in prepare_to_send(packet) {
                     client
                         .write_all(&packet[..])

@@ -3,57 +3,41 @@ const MAX: usize = std::u8::MAX as usize;
 #[derive(Default, Debug)]
 pub struct PreparePacketConfig {
     pub packet: Vec<u8>,
-    pub length: usize,
-    pub is_length_calculated: bool,
+    pub length: Option<usize>,
 }
 
 impl PreparePacketConfig {
     pub fn new() -> Self {
         Default::default()
     }
-}
 
-pub fn prepare_to_receive(part: Vec<u8>, config: &mut PreparePacketConfig) -> Option<Vec<u8>> {
-    if !config.is_length_calculated {
-        // Calculating length
-
-        if let Some(n) = part.iter().position(|&el| el == 0) {
-            let tail = &part[(n + 1)..];
-            config.length += sum(&Vec::from(&part[..n]));
-            config.packet.extend(tail);
-
-            if tail.len() > config.length {
-                assert!(config.packet.len() > config.length);
-                config.packet.resize(config.length, 0);
-                return Some(config.packet.clone());
-            } else {
-                config.length -= tail.len();
-                config.is_length_calculated = true;
+    pub fn prepare_to_receive(&mut self, part: Vec<u8>) -> Option<Vec<u8>> {
+        match self.length {
+            None => {
+                self.length = Some(sum(&part));
+                None
             }
-        } else {
-            config.length += sum(&part);
-        }
+            Some(_) => {
+                for num in part {
+                    if self.length.unwrap() > 0 {
+                        self.packet.push(num);
+                        self.length = Some(self.length.unwrap() - 1);
+                    } else {
+                        return Some(self.packet.clone());
+                    }
+                }
 
-        return None;
-    }
-
-    if config.length > 0 {
-        if part.len() > config.length {
-            config.packet.extend(Vec::from(&part[0..config.length]));
-            Some(config.packet.clone())
-        } else {
-            config.length -= part.len();
-            config.packet.extend(part);
-            None
+                None
+            }
         }
-    } else {
-        Some(config.packet.clone())
     }
 }
 
 pub fn prepare_to_send(packet: Vec<u8>) -> Vec<Vec<u8>> {
-    let mut ret = Vec::new();
     let mut len = packet.len();
+    assert!(len <= MAX * crate::PACKET_SIZE);
+
+    let mut ret = Vec::new();
 
     while len > MAX {
         len -= MAX;
@@ -61,10 +45,9 @@ pub fn prepare_to_send(packet: Vec<u8>) -> Vec<Vec<u8>> {
     }
 
     ret.push(len as u8);
-    ret.push(0);
+    ret.resize(crate::PACKET_SIZE, 0);
 
     ret.extend(packet);
-
     let mut ret = ret
         .chunks(crate::PACKET_SIZE)
         .map(|el| Vec::from(el))

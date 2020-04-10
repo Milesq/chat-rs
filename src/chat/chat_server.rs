@@ -35,19 +35,20 @@ pub fn run_server<'a>(port: u16) -> io::Result<&'a dyn Fn()> {
 
                 match socket.read_exact(&mut buf) {
                     Ok(_) => {
-                        if let Some(buf) = prepare_to_receive(buf, &mut packet_config) {
+                        if let Some(buf) = packet_config.prepare_to_receive(buf) {
                             packet_config = Default::default();
+                            println!("{:?}", bincode::deserialize::<Request>(&buf[..]));
+                            // let req = bincode::deserialize::<Request>(&buf[..]);
 
-                            let response = (*tcp_handler).handler(buf, addr);
+                            // let response = (*tcp_handler).handler(buf, addr);
 
-                            let packet = bincode::serialize(&response).unwrap();
-                            println!("{:?} {:?}", response, packet);
+                            // let packet = bincode::serialize(&response).unwrap();
 
-                            for part in prepare_to_send(packet.clone()) {
-                                socket.write_all(&part[..]).unwrap_or_else(|err| {
-                                    println!("Send response error: {:?}", err);
-                                });
-                            }
+                            // for part in prepare_to_send(packet.clone()) {
+                            //     socket.write_all(&part[..]).unwrap_or_else(|err| {
+                            //         println!("Send response error: {:?}", err);
+                            //     });
+                            // }
                         }
                     }
                     Err(ref err) if err.kind() == ErrorKind::WouldBlock => (),

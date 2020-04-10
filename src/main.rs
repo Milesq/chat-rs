@@ -11,7 +11,7 @@ fn sleep() {
     thread::sleep(Duration::from_millis(100));
 }
 
-const PACKET_SIZE: usize = 32;
+const PACKET_SIZE: usize = 64;
 const CONFIG_FILE_NAME: &str = "chat-user-data.bin";
 
 fn main() -> io::Result<()> {
