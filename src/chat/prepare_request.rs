@@ -63,3 +63,29 @@ pub fn prepare_to_send(packet: Vec<u8>) -> Vec<Vec<u8>> {
 fn sum(v: &Vec<u8>) -> usize {
     v.iter().fold(0usize, |acc, x| acc + *x as usize)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prepare_functions_are_compatibile() {
+        let packets = vec![
+            vec![1, 2, 3, 4],
+            vec![1, 2, 3, 4, 5],
+            vec![1, 2, 3, 4, 1, 2, 3, 41, 2, 3, 41, 2, 3, 4],
+        ];
+
+        for packet in packets {
+            let prepared = prepare_to_send(packet.clone());
+            let mut packet_config = PreparePacketConfig::new();
+
+            let mut received = None;
+            for part in prepared {
+                received = received.xor(packet_config.prepare_to_receive(part));
+            }
+
+            assert!(received.is_some());
+        }
+    }
+}
